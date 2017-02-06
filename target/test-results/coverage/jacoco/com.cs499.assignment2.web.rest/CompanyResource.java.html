@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CompanyResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Assignment 2</a> &gt; <a href="index.source.html" class="el_package">com.cs499.assignment2.web.rest</a> &gt; <span class="el_source">CompanyResource.java</span></div><h1>CompanyResource.java</h1><pre class="source lang-java linenums">package com.cs499.assignment2.web.rest;
+
+import com.codahale.metrics.annotation.Timed;
+import com.cs499.assignment2.domain.Company;
+
+import com.cs499.assignment2.repository.CompanyRepository;
+import com.cs499.assignment2.web.rest.util.HeaderUtil;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * REST controller for managing Company.
+ */
+@RestController
+@RequestMapping(&quot;/api&quot;)
+<span class="fc" id="L27">public class CompanyResource {</span>
+
+<span class="fc" id="L29">    private final Logger log = LoggerFactory.getLogger(CompanyResource.class);</span>
+        
+    @Inject
+    private CompanyRepository companyRepository;
+
+    /**
+     * POST  /companies : Create a new company.
+     *
+     * @param company the company to create
+     * @return the ResponseEntity with status 201 (Created) and with body the new company, or with status 400 (Bad Request) if the company has already an ID
+     * @throws URISyntaxException if the Location URI syntax is incorrect
+     */
+    @PostMapping(&quot;/companies&quot;)
+    @Timed
+    public ResponseEntity&lt;Company&gt; createCompany(@RequestBody Company company) throws URISyntaxException {
+<span class="fc" id="L44">        log.debug(&quot;REST request to save Company : {}&quot;, company);</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (company.getId() != null) {</span>
+<span class="fc" id="L46">            return ResponseEntity.badRequest().headers(HeaderUtil.createFailureAlert(&quot;company&quot;, &quot;idexists&quot;, &quot;A new company cannot already have an ID&quot;)).body(null);</span>
+        }
+<span class="fc" id="L48">        Company result = companyRepository.save(company);</span>
+<span class="fc" id="L49">        return ResponseEntity.created(new URI(&quot;/api/companies/&quot; + result.getId()))</span>
+<span class="fc" id="L50">            .headers(HeaderUtil.createEntityCreationAlert(&quot;company&quot;, result.getId().toString()))</span>
+<span class="fc" id="L51">            .body(result);</span>
+    }
+
+    /**
+     * PUT  /companies : Updates an existing company.
+     *
+     * @param company the company to update
+     * @return the ResponseEntity with status 200 (OK) and with body the updated company,
+     * or with status 400 (Bad Request) if the company is not valid,
+     * or with status 500 (Internal Server Error) if the company couldnt be updated
+     * @throws URISyntaxException if the Location URI syntax is incorrect
+     */
+    @PutMapping(&quot;/companies&quot;)
+    @Timed
+    public ResponseEntity&lt;Company&gt; updateCompany(@RequestBody Company company) throws URISyntaxException {
+<span class="fc" id="L66">        log.debug(&quot;REST request to update Company : {}&quot;, company);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (company.getId() == null) {</span>
+<span class="fc" id="L68">            return createCompany(company);</span>
+        }
+<span class="fc" id="L70">        Company result = companyRepository.save(company);</span>
+<span class="fc" id="L71">        return ResponseEntity.ok()</span>
+<span class="fc" id="L72">            .headers(HeaderUtil.createEntityUpdateAlert(&quot;company&quot;, company.getId().toString()))</span>
+<span class="fc" id="L73">            .body(result);</span>
+    }
+
+    /**
+     * GET  /companies : get all the companies.
+     *
+     * @return the ResponseEntity with status 200 (OK) and the list of companies in body
+     */
+    @GetMapping(&quot;/companies&quot;)
+    @Timed
+    public List&lt;Company&gt; getAllCompanies() {
+<span class="fc" id="L84">        log.debug(&quot;REST request to get all Companies&quot;);</span>
+<span class="fc" id="L85">        List&lt;Company&gt; companies = companyRepository.findAll();</span>
+<span class="fc" id="L86">        return companies;</span>
+    }
+
+    /**
+     * GET  /companies/:id : get the &quot;id&quot; company.
+     *
+     * @param id the id of the company to retrieve
+     * @return the ResponseEntity with status 200 (OK) and with body the company, or with status 404 (Not Found)
+     */
+    @GetMapping(&quot;/companies/{id}&quot;)
+    @Timed
+    public ResponseEntity&lt;Company&gt; getCompany(@PathVariable Long id) {
+<span class="fc" id="L98">        log.debug(&quot;REST request to get Company : {}&quot;, id);</span>
+<span class="fc" id="L99">        Company company = companyRepository.findOne(id);</span>
+<span class="fc" id="L100">        return Optional.ofNullable(company)</span>
+<span class="fc" id="L101">            .map(result -&gt; new ResponseEntity&lt;&gt;(</span>
+                result,
+                HttpStatus.OK))
+<span class="fc" id="L104">            .orElse(new ResponseEntity&lt;&gt;(HttpStatus.NOT_FOUND));</span>
+    }
+
+    /**
+     * DELETE  /companies/:id : delete the &quot;id&quot; company.
+     *
+     * @param id the id of the company to delete
+     * @return the ResponseEntity with status 200 (OK)
+     */
+    @DeleteMapping(&quot;/companies/{id}&quot;)
+    @Timed
+    public ResponseEntity&lt;Void&gt; deleteCompany(@PathVariable Long id) {
+<span class="fc" id="L116">        log.debug(&quot;REST request to delete Company : {}&quot;, id);</span>
+<span class="fc" id="L117">        companyRepository.delete(id);</span>
+<span class="fc" id="L118">        return ResponseEntity.ok().headers(HeaderUtil.createEntityDeletionAlert(&quot;company&quot;, id.toString())).build();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

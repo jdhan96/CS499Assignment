@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.cs499.assignment2.service.UserServiceIntTest
+-------------------------------------------------------------------------------
+Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 61.638 sec - in com.cs499.assignment2.service.UserServiceIntTest

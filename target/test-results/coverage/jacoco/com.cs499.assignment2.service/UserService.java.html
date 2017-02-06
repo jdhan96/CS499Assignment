@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Assignment 2</a> &gt; <a href="index.source.html" class="el_package">com.cs499.assignment2.service</a> &gt; <span class="el_source">UserService.java</span></div><h1>UserService.java</h1><pre class="source lang-java linenums">package com.cs499.assignment2.service;
+
+import com.cs499.assignment2.domain.Authority;
+import com.cs499.assignment2.domain.User;
+import com.cs499.assignment2.repository.AuthorityRepository;
+import com.cs499.assignment2.repository.PersistentTokenRepository;
+import com.cs499.assignment2.repository.UserRepository;
+import com.cs499.assignment2.security.AuthoritiesConstants;
+import com.cs499.assignment2.security.SecurityUtils;
+import com.cs499.assignment2.service.util.RandomUtil;
+import com.cs499.assignment2.web.rest.vm.ManagedUserVM;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import javax.inject.Inject;
+import java.util.*;
+
+/**
+ * Service class for managing users.
+ */
+@Service
+@Transactional
+<span class="fc" id="L29">public class UserService {</span>
+
+<span class="fc" id="L31">    private final Logger log = LoggerFactory.getLogger(UserService.class);</span>
+
+    @Inject
+    private PasswordEncoder passwordEncoder;
+
+    @Inject
+    private UserRepository userRepository;
+
+    @Inject
+    private PersistentTokenRepository persistentTokenRepository;
+
+    @Inject
+    private AuthorityRepository authorityRepository;
+
+    public Optional&lt;User&gt; activateRegistration(String key) {
+<span class="nc" id="L46">        log.debug(&quot;Activating user for activation key {}&quot;, key);</span>
+<span class="nc" id="L47">        return userRepository.findOneByActivationKey(key)</span>
+<span class="nc" id="L48">            .map(user -&gt; {</span>
+                // activate given user for the registration key.
+<span class="nc" id="L50">                user.setActivated(true);</span>
+<span class="nc" id="L51">                user.setActivationKey(null);</span>
+<span class="nc" id="L52">                log.debug(&quot;Activated user: {}&quot;, user);</span>
+<span class="nc" id="L53">                return user;</span>
+            });
+    }
+
+    public Optional&lt;User&gt; completePasswordReset(String newPassword, String key) {
+<span class="fc" id="L58">       log.debug(&quot;Reset user password for reset key {}&quot;, key);</span>
+
+<span class="fc" id="L60">       return userRepository.findOneByResetKey(key)</span>
+<span class="fc" id="L61">            .filter(user -&gt; {</span>
+<span class="fc" id="L62">                ZonedDateTime oneDayAgo = ZonedDateTime.now().minusHours(24);</span>
+<span class="fc" id="L63">                return user.getResetDate().isAfter(oneDayAgo);</span>
+           })
+<span class="fc" id="L65">           .map(user -&gt; {</span>
+<span class="fc" id="L66">                user.setPassword(passwordEncoder.encode(newPassword));</span>
+<span class="fc" id="L67">                user.setResetKey(null);</span>
+<span class="fc" id="L68">                user.setResetDate(null);</span>
+<span class="fc" id="L69">                return user;</span>
+           });
+    }
+
+    public Optional&lt;User&gt; requestPasswordReset(String mail) {
+<span class="fc" id="L74">        return userRepository.findOneByEmail(mail)</span>
+<span class="fc" id="L75">            .filter(User::getActivated)</span>
+<span class="fc" id="L76">            .map(user -&gt; {</span>
+<span class="fc" id="L77">                user.setResetKey(RandomUtil.generateResetKey());</span>
+<span class="fc" id="L78">                user.setResetDate(ZonedDateTime.now());</span>
+<span class="fc" id="L79">                return user;</span>
+            });
+    }
+
+    public User createUser(String login, String password, String firstName, String lastName, String email,
+        String langKey) {
+
+<span class="fc" id="L86">        User newUser = new User();</span>
+<span class="fc" id="L87">        Authority authority = authorityRepository.findOne(AuthoritiesConstants.USER);</span>
+<span class="fc" id="L88">        Set&lt;Authority&gt; authorities = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L89">        String encryptedPassword = passwordEncoder.encode(password);</span>
+<span class="fc" id="L90">        newUser.setLogin(login);</span>
+        // new user gets initially a generated password
+<span class="fc" id="L92">        newUser.setPassword(encryptedPassword);</span>
+<span class="fc" id="L93">        newUser.setFirstName(firstName);</span>
+<span class="fc" id="L94">        newUser.setLastName(lastName);</span>
+<span class="fc" id="L95">        newUser.setEmail(email);</span>
+<span class="fc" id="L96">        newUser.setLangKey(langKey);</span>
+        // new user is not active
+<span class="fc" id="L98">        newUser.setActivated(false);</span>
+        // new user gets registration key
+<span class="fc" id="L100">        newUser.setActivationKey(RandomUtil.generateActivationKey());</span>
+<span class="fc" id="L101">        authorities.add(authority);</span>
+<span class="fc" id="L102">        newUser.setAuthorities(authorities);</span>
+<span class="fc" id="L103">        userRepository.save(newUser);</span>
+<span class="fc" id="L104">        log.debug(&quot;Created Information for User: {}&quot;, newUser);</span>
+<span class="fc" id="L105">        return newUser;</span>
+    }
+
+    public User createUser(ManagedUserVM managedUserVM) {
+<span class="nc" id="L109">        User user = new User();</span>
+<span class="nc" id="L110">        user.setLogin(managedUserVM.getLogin());</span>
+<span class="nc" id="L111">        user.setFirstName(managedUserVM.getFirstName());</span>
+<span class="nc" id="L112">        user.setLastName(managedUserVM.getLastName());</span>
+<span class="nc" id="L113">        user.setEmail(managedUserVM.getEmail());</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (managedUserVM.getLangKey() == null) {</span>
+<span class="nc" id="L115">            user.setLangKey(&quot;en&quot;); // default language</span>
+        } else {
+<span class="nc" id="L117">            user.setLangKey(managedUserVM.getLangKey());</span>
+        }
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (managedUserVM.getAuthorities() != null) {</span>
+<span class="nc" id="L120">            Set&lt;Authority&gt; authorities = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L121">            managedUserVM.getAuthorities().forEach(</span>
+<span class="nc" id="L122">                authority -&gt; authorities.add(authorityRepository.findOne(authority))</span>
+            );
+<span class="nc" id="L124">            user.setAuthorities(authorities);</span>
+        }
+<span class="nc" id="L126">        String encryptedPassword = passwordEncoder.encode(RandomUtil.generatePassword());</span>
+<span class="nc" id="L127">        user.setPassword(encryptedPassword);</span>
+<span class="nc" id="L128">        user.setResetKey(RandomUtil.generateResetKey());</span>
+<span class="nc" id="L129">        user.setResetDate(ZonedDateTime.now());</span>
+<span class="nc" id="L130">        user.setActivated(true);</span>
+<span class="nc" id="L131">        userRepository.save(user);</span>
+<span class="nc" id="L132">        log.debug(&quot;Created Information for User: {}&quot;, user);</span>
+<span class="nc" id="L133">        return user;</span>
+    }
+
+    public void updateUser(String firstName, String lastName, String email, String langKey) {
+<span class="nc" id="L137">        userRepository.findOneByLogin(SecurityUtils.getCurrentUserLogin()).ifPresent(user -&gt; {</span>
+<span class="nc" id="L138">            user.setFirstName(firstName);</span>
+<span class="nc" id="L139">            user.setLastName(lastName);</span>
+<span class="nc" id="L140">            user.setEmail(email);</span>
+<span class="nc" id="L141">            user.setLangKey(langKey);</span>
+<span class="nc" id="L142">            log.debug(&quot;Changed Information for User: {}&quot;, user);</span>
+<span class="nc" id="L143">        });</span>
+<span class="nc" id="L144">    }</span>
+
+    public void updateUser(Long id, String login, String firstName, String lastName, String email,
+        boolean activated, String langKey, Set&lt;String&gt; authorities) {
+
+<span class="nc" id="L149">        Optional.of(userRepository</span>
+<span class="nc" id="L150">            .findOne(id))</span>
+<span class="nc" id="L151">            .ifPresent(user -&gt; {</span>
+<span class="nc" id="L152">                user.setLogin(login);</span>
+<span class="nc" id="L153">                user.setFirstName(firstName);</span>
+<span class="nc" id="L154">                user.setLastName(lastName);</span>
+<span class="nc" id="L155">                user.setEmail(email);</span>
+<span class="nc" id="L156">                user.setActivated(activated);</span>
+<span class="nc" id="L157">                user.setLangKey(langKey);</span>
+<span class="nc" id="L158">                Set&lt;Authority&gt; managedAuthorities = user.getAuthorities();</span>
+<span class="nc" id="L159">                managedAuthorities.clear();</span>
+<span class="nc" id="L160">                authorities.forEach(</span>
+<span class="nc" id="L161">                    authority -&gt; managedAuthorities.add(authorityRepository.findOne(authority))</span>
+                );
+<span class="nc" id="L163">                log.debug(&quot;Changed Information for User: {}&quot;, user);</span>
+<span class="nc" id="L164">            });</span>
+<span class="nc" id="L165">    }</span>
+
+    public void deleteUser(String login) {
+<span class="nc" id="L168">        userRepository.findOneByLogin(login).ifPresent(user -&gt; {</span>
+<span class="nc" id="L169">            userRepository.delete(user);</span>
+<span class="nc" id="L170">            log.debug(&quot;Deleted User: {}&quot;, user);</span>
+<span class="nc" id="L171">        });</span>
+<span class="nc" id="L172">    }</span>
+
+    public void changePassword(String password) {
+<span class="nc" id="L175">        userRepository.findOneByLogin(SecurityUtils.getCurrentUserLogin()).ifPresent(user -&gt; {</span>
+<span class="nc" id="L176">            String encryptedPassword = passwordEncoder.encode(password);</span>
+<span class="nc" id="L177">            user.setPassword(encryptedPassword);</span>
+<span class="nc" id="L178">            log.debug(&quot;Changed password for User: {}&quot;, user);</span>
+<span class="nc" id="L179">        });</span>
+<span class="nc" id="L180">    }</span>
+
+    @Transactional(readOnly = true)
+    public Optional&lt;User&gt; getUserWithAuthoritiesByLogin(String login) {
+<span class="fc" id="L184">        return userRepository.findOneByLogin(login).map(user -&gt; {</span>
+<span class="fc" id="L185">            user.getAuthorities().size();</span>
+<span class="fc" id="L186">            return user;</span>
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public User getUserWithAuthorities(Long id) {
+<span class="nc" id="L192">        User user = userRepository.findOne(id);</span>
+<span class="nc" id="L193">        user.getAuthorities().size(); // eagerly load the association</span>
+<span class="nc" id="L194">        return user;</span>
+    }
+
+    @Transactional(readOnly = true)
+    public User getUserWithAuthorities() {
+<span class="nc" id="L199">        Optional&lt;User&gt; optionalUser = userRepository.findOneByLogin(SecurityUtils.getCurrentUserLogin());</span>
+<span class="nc" id="L200">        User user = null;</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">        if (optionalUser.isPresent()) {</span>
+<span class="nc" id="L202">          user = optionalUser.get();</span>
+<span class="nc" id="L203">            user.getAuthorities().size(); // eagerly load the association</span>
+         }
+<span class="nc" id="L205">         return user;</span>
+    }
+
+    /**
+     * Persistent Token are used for providing automatic authentication, they should be automatically deleted after
+     * 30 days.
+     * &lt;p&gt;
+     * This is scheduled to get fired everyday, at midnight.
+     * &lt;/p&gt;
+     */
+    @Scheduled(cron = &quot;0 0 0 * * ?&quot;)
+    public void removeOldPersistentTokens() {
+<span class="fc" id="L217">        LocalDate now = LocalDate.now();</span>
+<span class="fc" id="L218">        persistentTokenRepository.findByTokenDateBefore(now.minusMonths(1)).forEach(token -&gt; {</span>
+<span class="fc" id="L219">            log.debug(&quot;Deleting token {}&quot;, token.getSeries());</span>
+<span class="fc" id="L220">            User user = token.getUser();</span>
+<span class="fc" id="L221">            user.getPersistentTokens().remove(token);</span>
+<span class="fc" id="L222">            persistentTokenRepository.delete(token);</span>
+<span class="fc" id="L223">        });</span>
+<span class="fc" id="L224">    }</span>
+
+    /**
+     * Not activated users should be automatically deleted after 3 days.
+     * &lt;p&gt;
+     * This is scheduled to get fired everyday, at 01:00 (am).
+     * &lt;/p&gt;
+     */
+    @Scheduled(cron = &quot;0 0 1 * * ?&quot;)
+    public void removeNotActivatedUsers() {
+<span class="fc" id="L234">        ZonedDateTime now = ZonedDateTime.now();</span>
+<span class="fc" id="L235">        List&lt;User&gt; users = userRepository.findAllByActivatedIsFalseAndCreatedDateBefore(now.minusDays(3));</span>
+<span class="pc bpc" id="L236" title="1 of 2 branches missed.">        for (User user : users) {</span>
+<span class="nc" id="L237">            log.debug(&quot;Deleting not activated user {}&quot;, user.getLogin());</span>
+<span class="nc" id="L238">            userRepository.delete(user);</span>
+<span class="nc" id="L239">        }</span>
+<span class="fc" id="L240">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

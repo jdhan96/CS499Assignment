@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DepartmentResource.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Assignment 2</a> &gt; <a href="index.source.html" class="el_package">com.cs499.assignment2.web.rest</a> &gt; <span class="el_source">DepartmentResource.java</span></div><h1>DepartmentResource.java</h1><pre class="source lang-java linenums">package com.cs499.assignment2.web.rest;
+
+import com.codahale.metrics.annotation.Timed;
+import com.cs499.assignment2.domain.Department;
+
+import com.cs499.assignment2.repository.DepartmentRepository;
+import com.cs499.assignment2.web.rest.util.HeaderUtil;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.inject.Inject;
+import javax.validation.Valid;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * REST controller for managing Department.
+ */
+@RestController
+@RequestMapping(&quot;/api&quot;)
+<span class="fc" id="L28">public class DepartmentResource {</span>
+
+<span class="fc" id="L30">    private final Logger log = LoggerFactory.getLogger(DepartmentResource.class);</span>
+        
+    @Inject
+    private DepartmentRepository departmentRepository;
+
+    /**
+     * POST  /departments : Create a new department.
+     *
+     * @param department the department to create
+     * @return the ResponseEntity with status 201 (Created) and with body the new department, or with status 400 (Bad Request) if the department has already an ID
+     * @throws URISyntaxException if the Location URI syntax is incorrect
+     */
+    @PostMapping(&quot;/departments&quot;)
+    @Timed
+    public ResponseEntity&lt;Department&gt; createDepartment(@Valid @RequestBody Department department) throws URISyntaxException {
+<span class="fc" id="L45">        log.debug(&quot;REST request to save Department : {}&quot;, department);</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        if (department.getId() != null) {</span>
+<span class="nc" id="L47">            return ResponseEntity.badRequest().headers(HeaderUtil.createFailureAlert(&quot;department&quot;, &quot;idexists&quot;, &quot;A new department cannot already have an ID&quot;)).body(null);</span>
+        }
+<span class="fc" id="L49">        Department result = departmentRepository.save(department);</span>
+<span class="fc" id="L50">        return ResponseEntity.created(new URI(&quot;/api/departments/&quot; + result.getId()))</span>
+<span class="fc" id="L51">            .headers(HeaderUtil.createEntityCreationAlert(&quot;department&quot;, result.getId().toString()))</span>
+<span class="fc" id="L52">            .body(result);</span>
+    }
+
+    /**
+     * PUT  /departments : Updates an existing department.
+     *
+     * @param department the department to update
+     * @return the ResponseEntity with status 200 (OK) and with body the updated department,
+     * or with status 400 (Bad Request) if the department is not valid,
+     * or with status 500 (Internal Server Error) if the department couldnt be updated
+     * @throws URISyntaxException if the Location URI syntax is incorrect
+     */
+    @PutMapping(&quot;/departments&quot;)
+    @Timed
+    public ResponseEntity&lt;Department&gt; updateDepartment(@Valid @RequestBody Department department) throws URISyntaxException {
+<span class="fc" id="L67">        log.debug(&quot;REST request to update Department : {}&quot;, department);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">        if (department.getId() == null) {</span>
+<span class="fc" id="L69">            return createDepartment(department);</span>
+        }
+<span class="fc" id="L71">        Department result = departmentRepository.save(department);</span>
+<span class="fc" id="L72">        return ResponseEntity.ok()</span>
+<span class="fc" id="L73">            .headers(HeaderUtil.createEntityUpdateAlert(&quot;department&quot;, department.getId().toString()))</span>
+<span class="fc" id="L74">            .body(result);</span>
+    }
+
+    /**
+     * GET  /departments : get all the departments.
+     *
+     * @return the ResponseEntity with status 200 (OK) and the list of departments in body
+     */
+    @GetMapping(&quot;/departments&quot;)
+    @Timed
+    public List&lt;Department&gt; getAllDepartments() {
+<span class="fc" id="L85">        log.debug(&quot;REST request to get all Departments&quot;);</span>
+<span class="fc" id="L86">        List&lt;Department&gt; departments = departmentRepository.findAll();</span>
+<span class="fc" id="L87">        return departments;</span>
+    }
+
+    /**
+     * GET  /departments/:id : get the &quot;id&quot; department.
+     *
+     * @param id the id of the department to retrieve
+     * @return the ResponseEntity with status 200 (OK) and with body the department, or with status 404 (Not Found)
+     */
+    @GetMapping(&quot;/departments/{id}&quot;)
+    @Timed
+    public ResponseEntity&lt;Department&gt; getDepartment(@PathVariable Long id) {
+<span class="fc" id="L99">        log.debug(&quot;REST request to get Department : {}&quot;, id);</span>
+<span class="fc" id="L100">        Department department = departmentRepository.findOne(id);</span>
+<span class="fc" id="L101">        return Optional.ofNullable(department)</span>
+<span class="fc" id="L102">            .map(result -&gt; new ResponseEntity&lt;&gt;(</span>
+                result,
+                HttpStatus.OK))
+<span class="fc" id="L105">            .orElse(new ResponseEntity&lt;&gt;(HttpStatus.NOT_FOUND));</span>
+    }
+
+    /**
+     * DELETE  /departments/:id : delete the &quot;id&quot; department.
+     *
+     * @param id the id of the department to delete
+     * @return the ResponseEntity with status 200 (OK)
+     */
+    @DeleteMapping(&quot;/departments/{id}&quot;)
+    @Timed
+    public ResponseEntity&lt;Void&gt; deleteDepartment(@PathVariable Long id) {
+<span class="fc" id="L117">        log.debug(&quot;REST request to delete Department : {}&quot;, id);</span>
+<span class="fc" id="L118">        departmentRepository.delete(id);</span>
+<span class="fc" id="L119">        return ResponseEntity.ok().headers(HeaderUtil.createEntityDeletionAlert(&quot;department&quot;, id.toString())).build();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

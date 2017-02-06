@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MetricsConfiguration.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Assignment 2</a> &gt; <a href="index.source.html" class="el_package">com.cs499.assignment2.config</a> &gt; <span class="el_source">MetricsConfiguration.java</span></div><h1>MetricsConfiguration.java</h1><pre class="source lang-java linenums">package com.cs499.assignment2.config;
+
+import com.codahale.metrics.JmxReporter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Slf4jReporter;
+import com.codahale.metrics.graphite.Graphite;
+import com.codahale.metrics.graphite.GraphiteReporter;
+import com.codahale.metrics.health.HealthCheckRegistry;
+import com.codahale.metrics.jvm.*;
+import com.ryantenney.metrics.spring.config.annotation.EnableMetrics;
+import com.ryantenney.metrics.spring.config.annotation.MetricsConfigurerAdapter;
+import com.zaxxer.hikari.HikariDataSource;
+import io.prometheus.client.CollectorRegistry;
+import io.prometheus.client.dropwizard.DropwizardExports;
+import io.prometheus.client.exporter.MetricsServlet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.web.servlet.ServletContextInitializer;
+import org.springframework.context.annotation.*;
+
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import java.lang.management.ManagementFactory;
+import java.net.InetSocketAddress;
+import java.util.concurrent.TimeUnit;
+
+@Configuration
+@EnableMetrics(proxyTargetClass = true)
+<span class="fc" id="L33">public class MetricsConfiguration extends MetricsConfigurerAdapter {</span>
+
+    private static final String PROP_METRIC_REG_JVM_MEMORY = &quot;jvm.memory&quot;;
+    private static final String PROP_METRIC_REG_JVM_GARBAGE = &quot;jvm.garbage&quot;;
+    private static final String PROP_METRIC_REG_JVM_THREADS = &quot;jvm.threads&quot;;
+    private static final String PROP_METRIC_REG_JVM_FILES = &quot;jvm.files&quot;;
+    private static final String PROP_METRIC_REG_JVM_BUFFERS = &quot;jvm.buffers&quot;;
+<span class="fc" id="L40">    private final Logger log = LoggerFactory.getLogger(MetricsConfiguration.class);</span>
+
+<span class="fc" id="L42">    private MetricRegistry metricRegistry = new MetricRegistry();</span>
+
+<span class="fc" id="L44">    private HealthCheckRegistry healthCheckRegistry = new HealthCheckRegistry();</span>
+
+    @Inject
+    private JHipsterProperties jHipsterProperties;
+
+    @Autowired(required = false)
+    private HikariDataSource hikariDataSource;
+
+    @Override
+    @Bean
+    public MetricRegistry getMetricRegistry() {
+<span class="fc" id="L55">        return metricRegistry;</span>
+    }
+
+    @Override
+    @Bean
+    public HealthCheckRegistry getHealthCheckRegistry() {
+<span class="fc" id="L61">        return healthCheckRegistry;</span>
+    }
+
+    @PostConstruct
+    public void init() {
+<span class="fc" id="L66">        log.debug(&quot;Registering JVM gauges&quot;);</span>
+<span class="fc" id="L67">        metricRegistry.register(PROP_METRIC_REG_JVM_MEMORY, new MemoryUsageGaugeSet());</span>
+<span class="fc" id="L68">        metricRegistry.register(PROP_METRIC_REG_JVM_GARBAGE, new GarbageCollectorMetricSet());</span>
+<span class="fc" id="L69">        metricRegistry.register(PROP_METRIC_REG_JVM_THREADS, new ThreadStatesGaugeSet());</span>
+<span class="fc" id="L70">        metricRegistry.register(PROP_METRIC_REG_JVM_FILES, new FileDescriptorRatioGauge());</span>
+<span class="fc" id="L71">        metricRegistry.register(PROP_METRIC_REG_JVM_BUFFERS, new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer()));</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">        if (hikariDataSource != null) {</span>
+<span class="fc" id="L73">            log.debug(&quot;Monitoring the datasource&quot;);</span>
+<span class="fc" id="L74">            hikariDataSource.setMetricRegistry(metricRegistry);</span>
+        }
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">        if (jHipsterProperties.getMetrics().getJmx().isEnabled()) {</span>
+<span class="fc" id="L77">            log.debug(&quot;Initializing Metrics JMX reporting&quot;);</span>
+<span class="fc" id="L78">            JmxReporter jmxReporter = JmxReporter.forRegistry(metricRegistry).build();</span>
+<span class="fc" id="L79">            jmxReporter.start();</span>
+        }
+
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">        if (jHipsterProperties.getMetrics().getLogs().isEnabled()) {</span>
+<span class="nc" id="L83">            log.info(&quot;Initializing Metrics Log reporting&quot;);</span>
+<span class="nc" id="L84">            final Slf4jReporter reporter = Slf4jReporter.forRegistry(metricRegistry)</span>
+<span class="nc" id="L85">                .outputTo(LoggerFactory.getLogger(&quot;metrics&quot;))</span>
+<span class="nc" id="L86">                .convertRatesTo(TimeUnit.SECONDS)</span>
+<span class="nc" id="L87">                .convertDurationsTo(TimeUnit.MILLISECONDS)</span>
+<span class="nc" id="L88">                .build();</span>
+<span class="nc" id="L89">            reporter.start(jHipsterProperties.getMetrics().getLogs().getReportFrequency(), TimeUnit.SECONDS);</span>
+        }
+<span class="fc" id="L91">    }</span>
+
+    @Configuration
+    @ConditionalOnClass(Graphite.class)
+<span class="fc" id="L95">    public static class GraphiteRegistry {</span>
+
+<span class="fc" id="L97">        private final Logger log = LoggerFactory.getLogger(GraphiteRegistry.class);</span>
+
+        @Inject
+        private MetricRegistry metricRegistry;
+
+        @Inject
+        private JHipsterProperties jHipsterProperties;
+
+        @PostConstruct
+        private void init() {
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">            if (jHipsterProperties.getMetrics().getGraphite().isEnabled()) {</span>
+<span class="nc" id="L108">                log.info(&quot;Initializing Metrics Graphite reporting&quot;);</span>
+<span class="nc" id="L109">                String graphiteHost = jHipsterProperties.getMetrics().getGraphite().getHost();</span>
+<span class="nc" id="L110">                Integer graphitePort = jHipsterProperties.getMetrics().getGraphite().getPort();</span>
+<span class="nc" id="L111">                String graphitePrefix = jHipsterProperties.getMetrics().getGraphite().getPrefix();</span>
+<span class="nc" id="L112">                Graphite graphite = new Graphite(new InetSocketAddress(graphiteHost, graphitePort));</span>
+<span class="nc" id="L113">                GraphiteReporter graphiteReporter = GraphiteReporter.forRegistry(metricRegistry)</span>
+<span class="nc" id="L114">                    .convertRatesTo(TimeUnit.SECONDS)</span>
+<span class="nc" id="L115">                    .convertDurationsTo(TimeUnit.MILLISECONDS)</span>
+<span class="nc" id="L116">                    .prefixedWith(graphitePrefix)</span>
+<span class="nc" id="L117">                    .build(graphite);</span>
+<span class="nc" id="L118">                graphiteReporter.start(1, TimeUnit.MINUTES);</span>
+            }
+<span class="fc" id="L120">        }</span>
+    }
+
+    @Configuration
+    @ConditionalOnClass(CollectorRegistry.class)
+<span class="fc" id="L125">    public static class PrometheusRegistry implements ServletContextInitializer{</span>
+
+<span class="fc" id="L127">        private final Logger log = LoggerFactory.getLogger(PrometheusRegistry.class);</span>
+
+        @Inject
+        private MetricRegistry metricRegistry;
+
+        @Inject
+        private JHipsterProperties jHipsterProperties;
+
+        @Override
+        public void onStartup(ServletContext servletContext) throws ServletException {
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            if(jHipsterProperties.getMetrics().getPrometheus().isEnabled()) {</span>
+<span class="nc" id="L138">                String endpoint = jHipsterProperties.getMetrics().getPrometheus().getEndpoint();</span>
+<span class="nc" id="L139">                log.info(&quot;Initializing Metrics Prometheus endpoint at {}&quot;, endpoint);</span>
+<span class="nc" id="L140">                CollectorRegistry collectorRegistry = new CollectorRegistry();</span>
+<span class="nc" id="L141">                collectorRegistry.register(new DropwizardExports(metricRegistry));</span>
+<span class="nc" id="L142">                servletContext</span>
+<span class="nc" id="L143">                    .addServlet(&quot;prometheusMetrics&quot;, new MetricsServlet(collectorRegistry))</span>
+<span class="nc" id="L144">                    .addMapping(endpoint);</span>
+            }
+<span class="nc" id="L146">        }</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>

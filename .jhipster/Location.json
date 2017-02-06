@@ -1,0 +1,36 @@
+{
+    "fluentMethods": true,
+    "relationships": [
+        {
+            "relationshipType": "one-to-one",
+            "relationshipName": "company",
+            "otherEntityName": "company",
+            "otherEntityField": "id",
+            "ownerSide": true,
+            "otherEntityRelationshipName": "location"
+        }
+    ],
+    "fields": [
+        {
+            "fieldName": "streetAdd",
+            "fieldType": "String"
+        },
+        {
+            "fieldName": "state",
+            "fieldType": "String"
+        },
+        {
+            "fieldName": "city",
+            "fieldType": "String"
+        },
+        {
+            "fieldName": "postalCode",
+            "fieldType": "String"
+        }
+    ],
+    "changelogDate": "20170206050754",
+    "entityTableName": "location",
+    "dto": "no",
+    "pagination": "no",
+    "service": "no"
+}

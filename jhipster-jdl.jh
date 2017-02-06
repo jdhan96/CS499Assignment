@@ -1,0 +1,46 @@
+entity Company {
+	companyName String
+}
+
+entity Department {
+	departmentName String required
+}
+
+
+entity Employee {
+	firstName String,
+	lastName String,
+	email String,
+	phoneNumber String,
+	salary Long
+}
+
+entity Location {
+	streetAdd String,
+    state String,
+    city String,
+    postalCode String
+}
+
+relationship OneToOne {
+	Location{company} to Company
+}
+relationship OneToMany {
+	Company{department} to Department
+}
+
+
+// defining multiple OneToMany relationships with comments
+relationship OneToMany {
+	Department{employee} to
+	/**
+	* Another side of the same relationship
+	*/
+	Employee
+}
+
+relationship ManyToOne {
+	Employee{manager} to Employee
+}
+
+

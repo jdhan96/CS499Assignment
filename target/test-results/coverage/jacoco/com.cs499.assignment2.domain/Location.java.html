@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Location.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Assignment 2</a> &gt; <a href="index.source.html" class="el_package">com.cs499.assignment2.domain</a> &gt; <span class="el_source">Location.java</span></div><h1>Location.java</h1><pre class="source lang-java linenums">package com.cs499.assignment2.domain;
+
+
+import javax.persistence.*;
+import java.io.Serializable;
+import java.util.Objects;
+
+/**
+ * A Location.
+ */
+@Entity
+@Table(name = &quot;location&quot;)
+<span class="fc" id="L13">public class Location implements Serializable {</span>
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Long id;
+
+    @Column(name = &quot;street_add&quot;)
+    private String streetAdd;
+
+    @Column(name = &quot;state&quot;)
+    private String state;
+
+    @Column(name = &quot;city&quot;)
+    private String city;
+
+    @Column(name = &quot;postal_code&quot;)
+    private String postalCode;
+
+    @OneToOne
+    @JoinColumn(unique = true)
+    private Company company;
+
+    public Long getId() {
+<span class="fc" id="L38">        return id;</span>
+    }
+
+    public void setId(Long id) {
+<span class="fc" id="L42">        this.id = id;</span>
+<span class="fc" id="L43">    }</span>
+
+    public String getStreetAdd() {
+<span class="fc" id="L46">        return streetAdd;</span>
+    }
+
+    public Location streetAdd(String streetAdd) {
+<span class="fc" id="L50">        this.streetAdd = streetAdd;</span>
+<span class="fc" id="L51">        return this;</span>
+    }
+
+    public void setStreetAdd(String streetAdd) {
+<span class="fc" id="L55">        this.streetAdd = streetAdd;</span>
+<span class="fc" id="L56">    }</span>
+
+    public String getState() {
+<span class="fc" id="L59">        return state;</span>
+    }
+
+    public Location state(String state) {
+<span class="fc" id="L63">        this.state = state;</span>
+<span class="fc" id="L64">        return this;</span>
+    }
+
+    public void setState(String state) {
+<span class="fc" id="L68">        this.state = state;</span>
+<span class="fc" id="L69">    }</span>
+
+    public String getCity() {
+<span class="fc" id="L72">        return city;</span>
+    }
+
+    public Location city(String city) {
+<span class="fc" id="L76">        this.city = city;</span>
+<span class="fc" id="L77">        return this;</span>
+    }
+
+    public void setCity(String city) {
+<span class="fc" id="L81">        this.city = city;</span>
+<span class="fc" id="L82">    }</span>
+
+    public String getPostalCode() {
+<span class="fc" id="L85">        return postalCode;</span>
+    }
+
+    public Location postalCode(String postalCode) {
+<span class="fc" id="L89">        this.postalCode = postalCode;</span>
+<span class="fc" id="L90">        return this;</span>
+    }
+
+    public void setPostalCode(String postalCode) {
+<span class="fc" id="L94">        this.postalCode = postalCode;</span>
+<span class="fc" id="L95">    }</span>
+
+    public Company getCompany() {
+<span class="fc" id="L98">        return company;</span>
+    }
+
+    public Location company(Company company) {
+<span class="nc" id="L102">        this.company = company;</span>
+<span class="nc" id="L103">        return this;</span>
+    }
+
+    public void setCompany(Company company) {
+<span class="nc" id="L107">        this.company = company;</span>
+<span class="nc" id="L108">    }</span>
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        if (this == o) {</span>
+<span class="nc" id="L113">            return true;</span>
+        }
+<span class="nc bnc" id="L115" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) {</span>
+<span class="nc" id="L116">            return false;</span>
+        }
+<span class="nc" id="L118">        Location location = (Location) o;</span>
+<span class="nc bnc" id="L119" title="All 4 branches missed.">        if (location.id == null || id == null) {</span>
+<span class="nc" id="L120">            return false;</span>
+        }
+<span class="nc" id="L122">        return Objects.equals(id, location.id);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L127">        return Objects.hashCode(id);</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="fc" id="L132">        return &quot;Location{&quot; +</span>
+            &quot;id=&quot; + id +
+            &quot;, streetAdd='&quot; + streetAdd + &quot;'&quot; +
+            &quot;, state='&quot; + state + &quot;'&quot; +
+            &quot;, city='&quot; + city + &quot;'&quot; +
+            &quot;, postalCode='&quot; + postalCode + &quot;'&quot; +
+            '}';
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.7.201606060606</span></div></body></html>
